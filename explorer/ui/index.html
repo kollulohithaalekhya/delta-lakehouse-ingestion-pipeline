@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lakehouse Explorer</title>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+
+        header {
+            padding: 20px;
+            text-align: center;
+            background: #1e293b;
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .container {
+            padding: 20px;
+        }
+
+        .card {
+            background: #1e293b;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+
+        h2 {
+            margin-top: 0;
+        }
+
+        .buttons button {
+            background: #3b82f6;
+            border: none;
+            padding: 8px 14px;
+            margin: 5px;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .buttons button:hover {
+            background: #2563eb;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+            background: #020617;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 10px;
+        }
+
+        .run-btn {
+            margin-top: 10px;
+            background: #22c55e;
+        }
+
+        .run-btn:hover {
+            background: #16a34a;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        th {
+            background: #334155;
+        }
+
+        table, th, td {
+            border: 1px solid #475569;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+
+        tr:nth-child(even) {
+            background: #020617;
+        }
+
+        #output {
+            margin-top: 10px;
+            overflow-x: auto;
+        }
+
+        .error {
+            color: #ef4444;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>Lakehouse Explorer</header>
+
+<div class="container">
+
+    <div class="card">
+        <h2>Tables</h2>
+        <div class="buttons">
+            <button onclick="loadTable('bronze')">Bronze</button>
+            <button onclick="loadTable('silver')">Silver</button>
+            <button onclick="loadTable('silver_corrected')">Corrected</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>SQL Query</h2>
+        <textarea id="query">
+SELECT type, COUNT(*) 
+FROM delta_scan('data/lakehouse/silver')
+GROUP BY type
+LIMIT 10
+        </textarea>
+        <button class="run-btn" onclick="runQuery()">Run Query</button>
+    </div>
+
+    <div class="card">
+        <h2>Results</h2>
+        <div id="output">Run a query or select a table</div>
+    </div>
+
+</div>
+
+<script>
+const API = "http://localhost:5000/api";
+
+async function loadTable(table) {
+    const res = await fetch(`${API}/preview/${table}`);
+    const data = await res.json();
+
+    if (data.error) {
+        showError(data.error);
+    } else {
+        renderTable(data.data);
+    }
+}
+
+async function runQuery() {
+    const query = document.getElementById("query").value;
+
+    const res = await fetch(`${API}/query`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ query })
+    });
+
+    const data = await res.json();
+
+    if (data.error) {
+        showError(data.error);
+    } else {
+        renderTable(data.data);
+    }
+}
+
+function renderTable(rows) {
+    if (!rows || rows.length === 0) {
+        document.getElementById("output").innerHTML = "No data available";
+        return;
+    }
+
+    let html = "<table><tr>";
+
+    rows[0].forEach((_, i) => {
+        html += `<th>Column ${i}</th>`;
+    });
+
+    html += "</tr>";
+
+    rows.forEach(row => {
+        html += "<tr>";
+        row.forEach(cell => {
+            html += `<td>${cell}</td>`;
+        });
+        html += "</tr>";
+    });
+
+    html += "</table>";
+
+    document.getElementById("output").innerHTML = html;
+}
+
+function showError(msg) {
+    document.getElementById("output").innerHTML = `<p class="error">${msg}</p>`;
+}
+</script>
+
+</body>
+</html>
