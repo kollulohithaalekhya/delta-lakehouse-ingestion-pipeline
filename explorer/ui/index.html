@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Lakehouse Explorer</title>
+    <link rel="icon" href="favicon.ico">
 
     <style>
         body {
@@ -17,7 +18,6 @@
             background: #1e293b;
             font-size: 24px;
             font-weight: bold;
-            letter-spacing: 1px;
         }
 
         .container {
@@ -29,7 +29,6 @@
             padding: 15px;
             margin-bottom: 20px;
             border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.3);
         }
 
         h2 {
@@ -73,7 +72,6 @@
             border-collapse: collapse;
             width: 100%;
             margin-top: 10px;
-            font-size: 14px;
         }
 
         th {
@@ -86,7 +84,6 @@
 
         th, td {
             padding: 8px;
-            text-align: left;
         }
 
         tr:nth-child(even) {
@@ -138,36 +135,49 @@ LIMIT 10
 </div>
 
 <script>
-const API = "http://localhost:5000/api";
+const API = "https://localhost:5000";
 
 async function loadTable(table) {
-    const res = await fetch(`${API}/preview/${table}`);
-    const data = await res.json();
+    try {
+        const res = await fetch(`${API}/preview/${table}`);
 
-    if (data.error) {
-        showError(data.error);
-    } else {
-        renderTable(data.data);
+        if (!res.ok) throw new Error("API not reachable");
+
+        const data = await res.json();
+
+        if (data.error) {
+            showError(data.error);
+        } else {
+            renderTable(data.data);
+        }
+    } catch (err) {
+        showError("Failed to connect to API. Check backend.");
     }
 }
 
 async function runQuery() {
     const query = document.getElementById("query").value;
 
-    const res = await fetch(`${API}/query`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ query })
-    });
+    try {
+        const res = await fetch(`${API}/query`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ query })
+        });
 
-    const data = await res.json();
+        if (!res.ok) throw new Error("Query failed");
 
-    if (data.error) {
-        showError(data.error);
-    } else {
-        renderTable(data.data);
+        const data = await res.json();
+
+        if (data.error) {
+            showError(data.error);
+        } else {
+            renderTable(data.data);
+        }
+    } catch (err) {
+        showError("Query failed. Check API connection.");
     }
 }
 
