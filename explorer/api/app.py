@@ -1,15 +1,19 @@
+import os
 from flask_cors import CORS
 from flask import Flask, request, jsonify
 import duckdb
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+CORS(app)
 
-DB_PATH = "data/lakehouse"
+# ✅ FIXED PATH
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+DB_PATH = os.path.join(BASE_DIR, "data", "lakehouse")
 
 
 def get_connection():
     con = duckdb.connect()
+    con.execute("INSTALL delta")
     con.execute("LOAD delta")
     return con
 
@@ -21,23 +25,19 @@ def health():
 
 @app.route("/api/tables", methods=["GET"])
 def list_tables():
-    tables = [
-        "bronze",
-        "silver",
-        "silver_corrected"
-    ]
-    return jsonify(tables)
+    return jsonify(["bronze", "silver", "silver_corrected"])
 
 
 @app.route("/api/query", methods=["POST"])
 def run_query():
-    query = request.json.get("query")
+    query = request.json.get("query", "")
 
     try:
         con = get_connection()
         result = con.execute(query).fetchall()
         return jsonify({"data": result})
     except Exception as e:
+        print("ERROR:", e)
         return jsonify({"error": str(e)}), 400
 
 
@@ -46,7 +46,7 @@ def preview_table(table):
     try:
         con = get_connection()
 
-        path = f"{DB_PATH}/{table}"
+        path = os.path.join(DB_PATH, table)
 
         result = con.execute(f"""
         SELECT * FROM delta_scan('{path}')
@@ -55,6 +55,7 @@ def preview_table(table):
 
         return jsonify({"data": result})
     except Exception as e:
+        print("ERROR:", e)
         return jsonify({"error": str(e)}), 400
 
 

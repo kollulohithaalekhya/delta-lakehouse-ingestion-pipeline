@@ -135,7 +135,7 @@ LIMIT 10
 </div>
 
 <script>
-const API = "https://localhost:5000";
+   const API= "http://localhost:5000/api";
 
 async function loadTable(table) {
     try {
@@ -151,7 +151,7 @@ async function loadTable(table) {
             renderTable(data.data);
         }
     } catch (err) {
-        showError("Failed to connect to API. Check backend.");
+        showError(err.message);
     }
 }
 
